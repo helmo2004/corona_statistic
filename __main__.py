@@ -8,6 +8,8 @@ import mpld3
 import urllib
 from string import Template
 
+# https://stackoverflow.com/questions/22981359/display-multiple-mpld3-exports-on-a-single-html-page
+
 csv_source = "https://data.humdata.org/hxlproxy/api/data-preview.csv?url=https%3A%2F%2Fraw.githubusercontent.com%2FCSSEGISandData%2FCOVID-19%2Fmaster%2Fcsse_covid_19_data%2Fcsse_covid_19_time_series%2Ftime_series_covid19_confirmed_global.csv&filename=time_series_covid19_confirmed_global.csv"
 treshold = 100
 
@@ -36,6 +38,7 @@ html_template = """
 <html>
 <head>
 <title>Corona Statistics</title>
+<meta charset="UTF-8">
 </head>
 <body>
 <table style="width:100%">
@@ -53,8 +56,9 @@ def process_country(country, data_dict):
     dates_dict = {}
 
     # filter data
+    regex = re.compile('\d+/\d+/\d+')
     for k, v in data_dict.iteritems():
-        if (re.match('\d+/\d+/\d+', k) and float(v) > treshold):
+        if (regex.match(k) and float(v) > treshold):
             date_time = datetime.strptime(k, '%m/%d/%y')
             dates_dict[date_time] = float(v)
 
@@ -72,12 +76,17 @@ def process_country(country, data_dict):
 
     labelx = -0.12
 
+    def generate_tool_tips(points):
+        captions = ["{:0.1f} ({})".format(val, val_date.strftime("%d.%m.%Y")) for (val_date, val) in zip(points[0].get_data()[0], points[0].get_data()[1])]
+        mpld3.plugins.connect(plt.gcf(), mpld3.plugins.PointLabelTooltip(points[0], labels=captions))
+        pass
+
     # total number of deseases
     ax1 = plt.subplot(411)
     plt.title(country)
     plt.ylabel("Number of corona")
     plt.grid(True)
-    plt.plot(d, number_of_deseases)
+    generate_tool_tips(plt.plot(d, number_of_deseases, "s-"))
     plt.gcf().autofmt_xdate()
     ax1.yaxis.set_label_coords(labelx, 0.5)
 
@@ -85,7 +94,7 @@ def process_country(country, data_dict):
     ax2 = plt.subplot(412, sharex=ax1)
     plt.grid(True)
     plt.yscale("log")
-    plt.plot(d, number_of_deseases)
+    generate_tool_tips(plt.plot(d, number_of_deseases, "s-"))
     plt.gcf().autofmt_xdate()
     ax2.yaxis.set_label_coords(labelx, 0.5)
 
@@ -93,7 +102,7 @@ def process_country(country, data_dict):
     ax3 = plt.subplot(413, sharex=ax1)
     plt.ylabel("Delta")
     plt.grid(True)
-    plt.bar(d, number_of_new_deseases, width=0.4)
+    generate_tool_tips(plt.plot(d, number_of_new_deseases, "s-"))
     plt.gcf().autofmt_xdate()
     ax3.yaxis.set_label_coords(labelx, 0.5)
 
@@ -101,7 +110,7 @@ def process_country(country, data_dict):
     ax4 = plt.subplot(414, sharex=ax1)
     plt.ylabel("Doubl.-Rate")
     plt.grid(True)
-    plt.bar(d, doubling_rate, width=0.4)
+    generate_tool_tips(plt.plot(d, doubling_rate, "s-"))
     plt.gcf().autofmt_xdate()
     ax4.yaxis.set_label_coords(labelx, 0.5)
 
