@@ -84,13 +84,14 @@ def process_country(country, data_dict):
         mpld3.plugins.connect(plt.gcf(), mpld3.plugins.PointHTMLTooltip(points[0], labels=captions))
         pass
 
+
     # this is important otherwise plots will have relation to each other and null exceptions occur during printing of the second graph
     plt.figure()
 
     # total number of deseases
     ax1 = plt.subplot(411)
     plt.title(country)
-    plt.ylabel("Number of corona")
+    plt.ylabel("No.")
     plt.grid(True)
     generate_tool_tips(plt.plot(d, number_of_deseases, "s-"))
     plt.gcf().autofmt_xdate()
@@ -106,7 +107,7 @@ def process_country(country, data_dict):
 
     # new deseases
     ax3 = plt.subplot(413, sharex=ax1)
-    plt.ylabel("Delta")
+    plt.ylabel("delta")
     plt.grid(True)
     generate_tool_tips(plt.plot(d, number_of_new_deseases, "s-"))
     plt.gcf().autofmt_xdate()
@@ -114,7 +115,7 @@ def process_country(country, data_dict):
 
     # doubling rate
     ax4 = plt.subplot(414, sharex=ax1)
-    plt.ylabel("Doubl.-Rate")
+    plt.ylabel("Dbl.-Rate")
     plt.grid(True)
     generate_tool_tips(plt.plot(d, doubling_rate, "s-"))
     plt.gcf().autofmt_xdate()
@@ -124,7 +125,7 @@ def process_country(country, data_dict):
     return result
 
 
-if __name__ == "__main__":
+def main():
     file_name = "data.csv"
     print "get {}".format(file_name)
     urllib.urlretrieve(csv_source, filename=file_name)
@@ -157,7 +158,11 @@ if __name__ == "__main__":
                 used_template = table_row_single_template
             table_rows = table_rows + Template(used_template).substitute(**locals()) + "\n"
 
-        html_content = Template(html_template).substitute(**locals())
+        html_content = Template(html_template).substitute(csv_source=csv_source, **locals())
         open("index.html", "w").write(html_content)
 
     print "done"
+
+
+if __name__ == "__main__":
+    main()
