@@ -4,6 +4,7 @@ import numpy
 import re
 from datetime import datetime
 from matplotlib import pyplot as plt
+import mpld3
 import urllib
 from string import Template
 
@@ -11,37 +12,43 @@ csv_source = "https://data.humdata.org/hxlproxy/api/data-preview.csv?url=https%3
 treshold = 100
 
 table_row_template = """\
-             <tr>
-                <td><img src="$img_src_left" border=1 style="max-height:100%; max-width:100%"></img></td>
-                <td><img src="$img_src_right" border=1 style="max-height:100%; max-width:100%"></img></td>
-             </tr>\
+<tr>
+<td>
+$plot_left
+</td>
+<td>
+$plot_right
+</td>
+</tr>\
 """
 
 table_row_single_template = """\
-             <tr>
-                <td><img src="$img_src_left" border=1 style="max-height:100%; max-width:100%"></img></td>
-                <td></td>
-             </tr>\
+<tr>
+<td>
+$plot_left
+</td>
+<td></td>
+</tr>\
 """
 
 html_template = """
 <!DOCTYPE html>
 <html>
-    <head>
-      <title>Corona Statistics</title>
-    </head>
-    <body>
-        <table style="width:100%">
+<head>
+<title>Corona Statistics</title>
+</head>
+<body>
+<table style="width:100%">
 $table_rows
-        </table>
-    </br>
-    <a href="$csv_source">Source - Johns Hopkins</a>
-    </body>
+</table>
+</br>
+<a href="$csv_source">Source - Johns Hopkins</a>
+</body>
 </html>
 """
 
 
-def process_country(country, data_dict, image_file_name):
+def process_country(country, data_dict):
     print "process country {}".format(country)
     dates_dict = {}
 
@@ -74,8 +81,8 @@ def process_country(country, data_dict, image_file_name):
     plt.gcf().autofmt_xdate()
     ax1.yaxis.set_label_coords(labelx, 0.5)
 
-        # total number of deseases
-    ax2 = plt.subplot(412)
+    # total number of deseases
+    ax2 = plt.subplot(412, sharex=ax1)
     plt.grid(True)
     plt.yscale("log")
     plt.plot(d, number_of_deseases)
@@ -92,14 +99,15 @@ def process_country(country, data_dict, image_file_name):
 
     # doubling rate
     ax4 = plt.subplot(414, sharex=ax1)
-    plt.ylabel("Doubling Rate")
+    plt.ylabel("Doubl.-Rate")
     plt.grid(True)
     plt.bar(d, doubling_rate, width=0.4)
     plt.gcf().autofmt_xdate()
     ax4.yaxis.set_label_coords(labelx, 0.5)
 
-    plt.savefig(image_file_name)
+    result = mpld3.fig_to_html(plt.gcf())
     plt.clf()
+    return result
 
 
 if __name__ == "__main__":
@@ -109,15 +117,14 @@ if __name__ == "__main__":
     with open(file_name) as csvfile:
         dict_reader = csv.DictReader(csvfile, delimiter=',')
         countries = ['Austria', 'Italy', 'Germany', 'Spain', 'Turkey']
-        pictures = []
+        html_graphs = []
         processed_countries = []
         for data_dict in dict_reader:
             current_country = data_dict['Country/Region']
             if current_country in countries:
-                image_file_name = current_country + ".png"
-                process_country(current_country, data_dict, image_file_name)
+                current_country_html = process_country(current_country, data_dict)
                 processed_countries.append(current_country)
-                pictures.append(image_file_name)
+                html_graphs.append(current_country_html)
         if sorted(countries) != sorted(processed_countries):
             print "Error: could not process all countries. Not found: {}".format(list(set(countries) - set(processed_countries)))
 
@@ -127,9 +134,9 @@ if __name__ == "__main__":
             n = max(1, n)
             return (l[i:i + n] for i in range(0, len(l), n))
 
-        for chunk in chunks(pictures, 2):
-            img_src_left = chunk[0]
-            img_src_right = chunk[1] if len(chunk) > 1 else ""
+        for chunk in chunks(html_graphs, 2):
+            plot_left = chunk[0]
+            plot_right = chunk[1] if len(chunk) > 1 else ""
             if len(chunk) > 1:
                 used_template = table_row_template
             else:
