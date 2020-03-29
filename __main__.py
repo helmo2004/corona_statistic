@@ -8,8 +8,6 @@ import mpld3
 import urllib
 from string import Template
 
-# https://stackoverflow.com/questions/22981359/display-multiple-mpld3-exports-on-a-single-html-page
-
 csv_source = "https://data.humdata.org/hxlproxy/api/data-preview.csv?url=https%3A%2F%2Fraw.githubusercontent.com%2FCSSEGISandData%2FCOVID-19%2Fmaster%2Fcsse_covid_19_data%2Fcsse_covid_19_time_series%2Ftime_series_covid19_confirmed_global.csv&filename=time_series_covid19_confirmed_global.csv"
 treshold = 100
 
@@ -71,15 +69,23 @@ def process_country(country, data_dict):
 
     # calculate doubling rate
     rate = numpy.divide(number_of_deseases[1:], number_of_deseases[:-1])
+
+    for i in range(len(rate)):
+        if rate[i] == 1.0:
+            rate[i] = 100000000  # force doubling rate to be 0
+
     log2_vector = numpy.full((len(rate)), numpy.log(2))
     doubling_rate = [0.0] + list(numpy.divide(log2_vector, numpy.log(rate)))
 
     labelx = -0.12
 
     def generate_tool_tips(points):
-        captions = ["{:0.1f} ({})".format(val, val_date.strftime("%d.%m.%Y")) for (val_date, val) in zip(points[0].get_data()[0], points[0].get_data()[1])]
-        mpld3.plugins.connect(plt.gcf(), mpld3.plugins.PointLabelTooltip(points[0], labels=captions))
+        captions = ["<h4 style=\"background-color:powderblue;\">{:0.1f} ({})</h4>".format(val, val_date.strftime("%d.%m.%Y")) for (val_date, val) in zip(points[0].get_data()[0], points[0].get_data()[1])]
+        mpld3.plugins.connect(plt.gcf(), mpld3.plugins.PointHTMLTooltip(points[0], labels=captions))
         pass
+
+    # this is important otherwise plots will have relation to each other and null exceptions occur during printing of the second graph
+    plt.figure()
 
     # total number of deseases
     ax1 = plt.subplot(411)
@@ -113,9 +119,8 @@ def process_country(country, data_dict):
     generate_tool_tips(plt.plot(d, doubling_rate, "s-"))
     plt.gcf().autofmt_xdate()
     ax4.yaxis.set_label_coords(labelx, 0.5)
-
     result = mpld3.fig_to_html(plt.gcf())
-    plt.clf()
+
     return result
 
 
